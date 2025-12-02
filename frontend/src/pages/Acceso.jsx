@@ -48,7 +48,6 @@ export default function Accesos() {
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-      {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-red-800">Historial de Accesos</h1>
@@ -59,7 +58,6 @@ export default function Accesos() {
         </button>
       </div>
 
-      {/* FILTROS */}
       <div className="bg-white p-4 rounded-xl shadow-sm mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="md:col-span-1 relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><SearchIcon /></div>
@@ -67,14 +65,16 @@ export default function Accesos() {
         </div>
         <div>
           <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-red-500 outline-none bg-white" value={vehicleType} onChange={(e) => setVehicleType(e.target.value)}>
-            <option value="">Tipo: Todos</option><option value="Automovil">Automóvil</option><option value="Motocicleta">Motocicleta</option><option value="Camioneta">Camioneta</option>
+            <option value="">Tipo: Todos</option>
+            <option value="Automovil">Automóvil</option>
+            <option value="Motocicleta">Motocicleta</option>
+            <option value="Camioneta">Camioneta</option>
           </select>
         </div>
         <div><input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-red-500 outline-none" value={dateFrom} onChange={e => setDateFrom(e.target.value)} /></div>
         <div><input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-red-500 outline-none" value={dateTo} onChange={e => setDateTo(e.target.value)} /></div>
       </div>
 
-      {/* TABLA */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -107,7 +107,6 @@ export default function Accesos() {
         </div>
       </div>
 
-      {/* MODAL */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm transition-opacity">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in">
@@ -129,14 +128,14 @@ export default function Accesos() {
   );
 }
 
-// --- COMPONENTE OPTIMIZADO PARA NUBE ---
+// --- COMPONENTE OPTIMIZADO MODO SUPERVIVENCIA ---
 function ValidationComponentInternal({ apiUrl, onClose, onRefresh }) {
   const [previewUrl, setPreviewUrl] = useState(null);
   const [base64Image, setBase64Image] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [accessType, setAccessType] = useState('entrada');
 
-  // --- OPTIMIZACIÓN EXTREMA DE IMAGEN ---
+  // --- DIETA EXTREMA PARA LA IMAGEN ---
   const redimensionarImagen = (file) => {
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -147,20 +146,20 @@ function ValidationComponentInternal({ apiUrl, onClose, onRefresh }) {
         img.onload = () => {
           const canvas = document.createElement('canvas');
           
-          // 1. Reducción de tamaño (450px es suficiente para placas)
-          const maxWidth = 450; 
+          // 1. TAMAÑO MINIATURA (350px): Suficiente para placas, muy ligero
+          const maxWidth = 350; 
           const scaleSize = maxWidth / img.width;
           canvas.width = maxWidth;
           canvas.height = img.height * scaleSize;
 
           const ctx = canvas.getContext('2d');
           
-          // 2. Conversión a Blanco y Negro (Ahorra procesamiento en Backend)
-          ctx.filter = 'grayscale(100%) contrast(1.2)';
+          // 2. ESCALA DE GRISES EN CLIENTE (Menos trabajo para el backend)
+          ctx.filter = 'grayscale(100%) contrast(1.5)'; 
           
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
           
-          // 3. Compresión JPEG (0.5 calidad)
+          // 3. COMPRESIÓN AGRESIVA (Calidad 0.5)
           const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
           resolve(dataUrl);
         };
@@ -171,6 +170,7 @@ function ValidationComponentInternal({ apiUrl, onClose, onRefresh }) {
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Guardamos versión optimizada
       const resizedBase64 = await redimensionarImagen(file);
       setPreviewUrl(resizedBase64);
       setBase64Image(resizedBase64);
@@ -182,7 +182,7 @@ function ValidationComponentInternal({ apiUrl, onClose, onRefresh }) {
     setIsLoading(true);
 
     try {
-      // Enviamos la imagen optimizada
+      // Enviamos la imagen "a dieta"
       const response = await axios.post(apiUrl, {
         image_base64: base64Image,
         tipo_acceso: accessType
@@ -192,8 +192,8 @@ function ValidationComponentInternal({ apiUrl, onClose, onRefresh }) {
 
       if (data.resultado === 'Autorizado') {
         Swal.fire({
-            title: '¡ACCESO AUTORIZADO!',
-            html: `<p style="font-size: 1.2em;">Placa: <b>${data.datos.placa}</b></p><p class="text-muted">${data.datos.propietario}</p>`,
+            title: '¡AUTORIZADO!',
+            html: `<h2 style="color:green; font-weight:bold;">${data.datos.placa}</h2><p>${data.datos.propietario}</p>`,
             icon: 'success',
             timer: 3000,
             showConfirmButton: false
@@ -202,8 +202,8 @@ function ValidationComponentInternal({ apiUrl, onClose, onRefresh }) {
         onClose();
       } else {
         Swal.fire({
-            title: '¡ACCESO DENEGADO!',
-            text: `Placa: ${data.datos.placa || 'No detectada'} - ${data.datos.motivo}`,
+            title: '¡DENEGADO!',
+            html: `<h3 style="color:red;">${data.datos.placa || 'No leída'}</h3><p>${data.datos.motivo}</p>`,
             icon: 'error',
             confirmButtonColor: '#b91c1c'
         });
@@ -214,9 +214,7 @@ function ValidationComponentInternal({ apiUrl, onClose, onRefresh }) {
       
       let msg = 'Error de conexión.';
       if (status === 502 || status === 500) {
-          msg = 'El servidor está reiniciando por uso de memoria. Espera 1 minuto e intenta de nuevo.';
-      } else if (error.code === "ERR_NETWORK") {
-          msg = 'Error de red. El servidor puede estar inactivo.';
+          msg = '⚠️ Memoria llena en servidor gratuito. Intenta de nuevo en 10 segundos.';
       }
 
       Swal.fire({ title: 'Error', text: msg, icon: 'error', confirmButtonColor: '#b91c1c' });
@@ -247,8 +245,8 @@ function ValidationComponentInternal({ apiUrl, onClose, onRefresh }) {
         )}
       </div>
 
-      <button onClick={handleValidate} disabled={!previewUrl || isLoading} className={`w-full py-3.5 rounded-xl font-bold text-white flex justify-center items-center transition-all ${!previewUrl || isLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-red-600 hover:bg-red-700 active:scale-95'}`}>
-        {isLoading ? 'Procesando...' : `Validar ${accessType.toUpperCase()}`}
+      <button onClick={handleValidate} disabled={!previewUrl || isLoading} className={`w-full py-3.5 rounded-xl font-bold text-white flex justify-center items-center transition-all ${!previewUrl || isLoading ? 'bg-gray-400' : 'bg-red-600 hover:bg-red-700 active:scale-95'}`}>
+        {isLoading ? 'Procesando (Modo Ahorro)...' : `Validar ${accessType.toUpperCase()}`}
       </button>
     </div>
   );
