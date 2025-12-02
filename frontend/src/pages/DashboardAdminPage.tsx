@@ -3,7 +3,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 // Configuración API
-const API_URL = 'http://127.0.0.1:5000/api';
+// Borra la línea fija y pon esto:
+const API_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000') + '/api';
 
 // Interfaces de datos
 interface IResumen {

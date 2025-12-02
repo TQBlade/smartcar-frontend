@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
+import { useEffect, useMemo, useState } from 'react';
 import CustomTable from '../components/CustomTable.jsx';
 
 // Helper para formatear el JSON en el Modal
@@ -17,7 +17,8 @@ const formatData = (data) => {
     }
 };
 
-const API_URL = 'http://127.0.0.1:5000/api/admin/auditoria';
+// Borra la línea fija y pon esto:
+const API_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000') + '/api';
 
 const AuditoriaPage = () => {
     const [historial, setHistorial] = useState([]);

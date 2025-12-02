@@ -1,14 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import axios from 'axios';
+import { format, getDay, parse, startOfWeek } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { useCallback, useEffect, useState } from 'react';
 import { Calendar, dateFnsLocalizer } from 'react-big-calendar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { format, parse, startOfWeek, getDay } from 'date-fns';
-import { es } from 'date-fns/locale';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 const locales = { 'es': es };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
-const API_URL = 'http://127.0.0.1:5000/api';
+// Borra la línea fija y pon esto:
+const API_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000') + '/api';
 
 const CalendarioVigilante = () => {
   const navigate = useNavigate();

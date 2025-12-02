@@ -9,7 +9,8 @@ import LoadingOverlay from '../components/LoadingOverlay.jsx'; // <--- IMPORTANT
 
 const locales = { 'es': es };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
-const API_URL = 'http://127.0.0.1:5000/api';
+// Borra la línea fija y pon esto:
+const API_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000') + '/api';
 
 const CalendarioAdmin = () => {
   const navigate = useNavigate();

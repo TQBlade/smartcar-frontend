@@ -5,7 +5,8 @@ import CustomTable from '../components/CustomTable.jsx';
 import LoadingOverlay from '../components/LoadingOverlay.jsx';
 import ModalForm from '../components/ModalForm.jsx';
 
-const API_URL = 'http://127.0.0.1:5000/api';
+// Borra la línea fija y pon esto:
+const API_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000') + '/api';
 const getToken = () => localStorage.getItem('token');
 
 const PersonaForm = ({ formData, handleChange }) => (

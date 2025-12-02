@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import CustomTable from '../components/CustomTable.jsx';
 import LoadingOverlay from '../components/LoadingOverlay.jsx'; // <--- IMPORTANTE
 
-const API_URL = 'http://127.0.0.1:5000/api';
+// Borra la línea fija y pon esto:
+const API_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000') + '/api';
 
 const VehiculosDentro = () => {
   const navigate = useNavigate();
