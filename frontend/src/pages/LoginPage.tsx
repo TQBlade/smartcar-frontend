@@ -45,7 +45,7 @@ const LoginPage: React.FC = () => {
         }
 
         try {
-            const response = await axios.post('http://127.0.0.1:5000/login', {
+            const response = await axios.post('https://smartcar-api.onrender.com/login', {
                 usuario,
                 clave,
                 rol
