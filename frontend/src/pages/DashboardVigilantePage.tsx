@@ -1,17 +1,22 @@
 import axios from 'axios';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import Swal from 'sweetalert2';
-import styles from './DashboardVigilantePage.module.css'; // Tu CSS original
+import Swal from 'sweetalert2'; // <--- IMPORTANTE
 
-// URL NUBE
+// --- CONFIGURACIÓN URL NUBE ---
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000';
 const API_URL = `${BASE_URL}/api`;
 
+
 const DashboardVigilantePage: React.FC = () => {
-  const [ocupacion, setOcupacion] = useState({ motos: { disp: 0 }, carros: { disp: 0 } });
+  const [ocupacion, setOcupacion] = useState({
+    motos: { ocupados: 0, total: 1000, disp: 1000 },
+    carros: { ocupados: 0, total: 300, disp: 300 },
+    global: { ocupados: 0, total: 1300, disp: 1300, pct: 0 }
+  });
   const [ultimos, setUltimos] = useState<any[]>([]);
   const [placaBusqueda, setPlacaBusqueda] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const cargarDatos = useCallback(async () => {
     try {
@@ -25,93 +30,156 @@ const DashboardVigilantePage: React.FC = () => {
 
       setOcupacion(resOcup.data);
       setUltimos(resAccess.data);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     cargarDatos();
-    const interval = setInterval(cargarDatos, 10000);
+    const interval = setInterval(cargarDatos, 10000); 
     return () => clearInterval(interval);
   }, [cargarDatos]);
 
-  const buscarPlaca = async () => {
+  const buscarPlaca = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!placaBusqueda) return;
+    
     try {
-      const token = localStorage.getItem("token");
-      const res = await axios.get(`${API_URL}/buscar_placa/${placaBusqueda}`, { headers: { Authorization: `Bearer ${token}` } });
-      
-      Swal.fire({
-          title: '✅ Encontrado',
-          html: `<p>Placa: <b>${res.data.placa}</b></p><p>Propietario: ${res.data.propietario}</p><p>Tipo: ${res.data.tipo}</p>`,
-          icon: 'success',
-          confirmButtonColor: '#b91c1c'
-      });
-      setPlacaBusqueda('');
-    } catch {
-      Swal.fire({ title: '❌ No existe', text: 'El vehículo no está registrado.', icon: 'error', confirmButtonColor: '#b91c1c' });
+        const token = localStorage.getItem("token");
+        const res = await axios.get(`${API_URL}/api/buscar_placa/${placaBusqueda}`, { 
+            headers: { Authorization: `Bearer ${token}` } 
+        });
+        
+        // SWEETALERT: Éxito
+        Swal.fire({
+            title: '✅ Vehículo Encontrado',
+            html: `
+                <div class="text-left">
+                    <p><strong>Placa:</strong> ${res.data.placa}</p>
+                    <p><strong>Propietario:</strong> ${res.data.propietario}</p>
+                    <p><strong>Tipo:</strong> ${res.data.tipo}</p>
+                    <p><strong>Color:</strong> ${res.data.color}</p>
+                </div>
+            `,
+            icon: 'success',
+            confirmButtonColor: '#b91c1c'
+        });
+        setPlacaBusqueda('');
+    } catch { 
+        // SWEETALERT: Error
+        Swal.fire({
+            title: '❌ No Registrado',
+            text: `El vehículo ${placaBusqueda} no existe en el sistema.`,
+            icon: 'error',
+            confirmButtonColor: '#b91c1c'
+        });
     }
   };
 
+  if (loading) return <div className="flex h-screen items-center justify-center font-bold text-red-700">Cargando Sistema...</div>;
+
   return (
-    <main className={styles.mainContent}> 
-        {/* VALIDAR ACCESO MANUAL */}
-        <section className={`${styles.tarjeta} ${styles.rojo}`}>
-          <h2>Validar acceso vehicular</h2>
-          <input 
-            type="text" 
-            placeholder="Buscar placa..." 
-            value={placaBusqueda}
-            onChange={(e) => setPlacaBusqueda(e.target.value.toUpperCase())}
-            className="form-control mb-2"
-          />
-          <button onClick={buscarPlaca} className="btn btn-danger w-100">Verificar</button>
-        </section>
+    <div className="p-6 bg-gray-100 min-h-screen font-sans">
+        
+        {/* HEADER OCUPACIÓN */}
+        <div className="bg-white rounded-2xl shadow-md p-6 mb-6 border-t-4 border-red-700">
+            <h1 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                <i className="fas fa-parking mr-3 text-red-600"></i> Disponibilidad Actual
+            </h1>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* CARROS */}
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                    <div className="flex justify-between items-center mb-2">
+                        <span className="font-bold text-gray-700 flex items-center"><i className="fas fa-car mr-2"></i> CARROS</span>
+                        <span className="text-2xl font-extrabold text-blue-700">{ocupacion.carros.disp} <small className="text-sm text-gray-400 font-normal">/ {ocupacion.carros.total}</small></span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div className="bg-blue-600 h-3 rounded-full transition-all" style={{ width: `${(ocupacion.carros.ocupados/ocupacion.carros.total)*100}%` }}></div>
+                    </div>
+                </div>
 
-        {/* HISTORIAL */}
-        <section className={styles.tarjeta}>
-          <h2>Historial de Accesos</h2>
-          <table className="table table-sm">
-            <thead>
-              <tr>
-                <th>Hora</th>
-                <th>Placa</th>
-                <th>Resultado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ultimos.map((a, index) => (
-                <tr key={index}>
-                  <td>{a.fecha_hora}</td>
-                  <td>{a.placa}</td>
-                  <td>{a.resultado}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+                {/* MOTOS */}
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                    <div className="flex justify-between items-center mb-2">
+                        <span className="font-bold text-gray-700 flex items-center"><i className="fas fa-motorcycle mr-2"></i> MOTOS</span>
+                        <span className="text-2xl font-extrabold text-yellow-600">{ocupacion.motos.disp} <small className="text-sm text-gray-400 font-normal">/ {ocupacion.motos.total}</small></span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-3">
+                        <div className="bg-yellow-500 h-3 rounded-full transition-all" style={{ width: `${(ocupacion.motos.ocupados/ocupacion.motos.total)*100}%` }}></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        {/* CUPOS DISPONIBLES */}
-        <section className={`${styles.tarjeta} ${styles.alerta}`}>
-          <h2>Cupos Disponibles</h2>
-          <div className="d-flex justify-content-around mt-3">
-             <div className="text-center">
-                 <h3 className="text-primary font-bold">{ocupacion.carros.disp}</h3>
-                 <small>CARROS</small>
-             </div>
-             <div className="text-center">
-                 <h3 className="text-warning font-bold">{ocupacion.motos.disp}</h3>
-                 <small>MOTOS</small>
-             </div>
-          </div>
-        </section>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* ACCIONES */}
+            <div className="space-y-6">
+                <div className="bg-white p-6 rounded-2xl shadow-sm">
+                    <h3 className="font-bold text-gray-700 mb-4">Consulta de Placa</h3>
+                    <form onSubmit={buscarPlaca} className="flex gap-3">
+                        <input 
+                            type="text" 
+                            className="flex-1 border-2 border-gray-300 focus:border-red-500 rounded-lg px-4 py-3 text-lg font-bold uppercase text-center outline-none"
+                            placeholder="PLACA"
+                            value={placaBusqueda}
+                            onChange={e => setPlacaBusqueda(e.target.value.toUpperCase())}
+                        />
+                        <button type="submit" className="bg-red-700 text-white px-6 rounded-lg font-bold hover:bg-red-800 transition shadow-md">
+                            VERIFICAR
+                        </button>
+                    </form>
+                </div>
 
-        {/* GESTIÓN */}
-        <section className={styles.tarjeta}>
-          <h2>Acciones</h2>
-          <Link to="/vigilante/vehiculos" className="btn btn-outline-primary w-100 mb-2">Gestión Vehículos</Link>
-          <Link to="/vigilante/reportes" className="btn btn-outline-danger w-100">Reportar Novedad</Link>
-        </section>
-      </main>
+                <div className="grid grid-cols-2 gap-4">
+                    <Link to="/vigilante/historial" className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-lg transition text-center group border border-gray-100">
+                        <i className="fas fa-camera fa-2x text-red-600 mb-2 group-hover:scale-110 transition"></i>
+                        <h4 className="font-bold text-gray-800">Validar Acceso</h4>
+                    </Link>
+                    <Link to="/vigilante/reportes" className="bg-white p-6 rounded-2xl shadow-sm hover:shadow-lg transition text-center group border border-gray-100">
+                        <i className="fas fa-exclamation-triangle fa-2x text-orange-500 mb-2 group-hover:scale-110 transition"></i>
+                        <h4 className="font-bold text-gray-800">Reportar Novedad</h4>
+                    </Link>
+                </div>
+            </div>
+
+            {/* TRÁFICO RECIENTE */}
+            <div className="bg-white rounded-2xl shadow-sm overflow-hidden h-full">
+                <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                    <h3 className="font-bold text-gray-700 text-sm uppercase">Tráfico Reciente</h3>
+                    <span className="text-xs font-bold text-green-600 animate-pulse">● EN VIVO</span>
+                </div>
+                <div className="overflow-y-auto max-h-[300px]">
+                    <table className="w-full text-left text-sm">
+                        <tbody className="divide-y divide-gray-100">
+                            {ultimos.map((u, i) => (
+                                <tr key={i} className="hover:bg-red-50 transition-colors">
+                                    <td className="px-6 py-4">
+                                        <div className="font-bold text-gray-800 text-base">{u.placa}</div>
+                                        <div className="text-xs text-gray-400">{u.fecha_hora}</div>
+                                    </td>
+                                    <td className="px-6 py-4 text-right">
+                                        <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-bold ${
+                                            u.resultado.toLowerCase().includes('autorizado') || u.resultado.toLowerCase().includes('concedido')
+                                            ? 'bg-green-100 text-green-800' 
+                                            : 'bg-red-100 text-red-800'
+                                        }`}>
+                                            {u.resultado.split(' ')[0]}
+                                        </span>
+                                    </td>
+                                </tr>
+                            ))}
+                            {ultimos.length === 0 && <tr><td colSpan={2} className="text-center py-10 text-gray-400">Sin movimientos.</td></tr>}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
   );
 };
 
