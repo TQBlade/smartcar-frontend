@@ -45,11 +45,13 @@ const LoginPage: React.FC = () => {
         }
 
         try {
-            const response = await axios.post('https://smartcar-api.onrender.com/login', {
+            const api = import.meta.env.VITE_API_URL;
+            const response = await axios.post(`${api}/login`, {
                 usuario,
                 clave,
                 rol
             });
+
 
             setAlert({ message: '✅ Inicio de sesión exitoso', type: 'success', show: true });
             setLoading(false);
