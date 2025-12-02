@@ -17,8 +17,9 @@ const formatData = (data) => {
     }
 };
 
-// Borra la línea fija y pon esto:
-const API_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000') + '/api';
+// --- CORRECCIÓN DE URL PARA NUBE ---
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000';
+const API_URL = `${BASE_URL}/api/admin/auditoria`; // Endpoint correcto
 
 const AuditoriaPage = () => {
     const [historial, setHistorial] = useState([]);
