@@ -5,66 +5,150 @@ import CustomTable from '../components/CustomTable.jsx';
 import LoadingOverlay from '../components/LoadingOverlay.jsx';
 import ModalForm from '../components/ModalForm.jsx';
 
-const BASE_URL = import.meta.env.VITE_API_URL;
+// URL NUBE
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000';
 const API_URL = `${BASE_URL}/api`;
 
+// Formulario Completo como pediste
 const VigilanteForm = ({ formData, handleChange }) => (
   <div className="row g-3">
-    <div className="col-12 fw-bold text-primary">Datos Personales</div>
-    <div className="col-6"><label>Nombre</label><input className="form-control" name="nombre" value={formData.nombre||''} onChange={handleChange} required/></div>
-    <div className="col-6"><label>Documento</label><input className="form-control" name="doc_identidad" value={formData.doc_identidad||''} onChange={handleChange} required/></div>
-    <div className="col-6"><label>Teléfono</label><input className="form-control" name="telefono" value={formData.telefono||''} onChange={handleChange} required/></div>
-    <div className="col-6"><label>Rol</label><select className="form-select" name="id_rol" value={formData.id_rol||''} onChange={handleChange} required><option value="1">ADMINISTRADOR</option><option value="2">VIGILANTE</option></select></div>
-    <div className="col-12 fw-bold text-danger mt-3">Credenciales</div>
-    <div className="col-6"><label>Usuario</label><input className="form-control" name="usuario" value={formData.usuario||''} onChange={handleChange} required/></div>
-    <div className="col-6"><label>Clave</label><input className="form-control" type="password" name="clave" value={formData.clave||''} onChange={handleChange}/></div>
+    <div className="col-md-6">
+      <label className="fw-bold">Nombre Completo</label>
+      <input type="text" name="nombre" value={formData.nombre || ''} onChange={handleChange} required className="form-control" />
+    </div>
+    <div className="col-md-6">
+      <label className="fw-bold">Documento</label>
+      <input type="text" name="doc_identidad" value={formData.doc_identidad || ''} onChange={handleChange} required className="form-control" />
+    </div>
+    <div className="col-md-6">
+      <label className="fw-bold">Teléfono</label>
+      <input type="text" name="telefono" value={formData.telefono || ''} onChange={handleChange} required className="form-control" />
+    </div>
+    <div className="col-md-6">
+      <label className="fw-bold">Rol Asignado</label>
+      <select name="id_rol" value={formData.id_rol || ''} onChange={handleChange} required className="form-select">
+        <option value="">Seleccione...</option>
+        <option value="1">ADMINISTRADOR</option>
+        <option value="2">VIGILANTE</option>
+      </select>
+    </div>
+    <div className="col-md-6">
+      <label className="fw-bold">Usuario (Login)</label>
+      <input type="text" name="usuario" value={formData.usuario || ''} onChange={handleChange} required className="form-control" />
+    </div>
+    <div className="col-md-6">
+      <label className="fw-bold">Contraseña</label>
+      <input type="password" name="clave" value={formData.clave || ''} onChange={handleChange} className="form-control" placeholder="Dejar vacío si no cambia" />
+    </div>
   </div>
 );
 
 const VigilantesPage = () => {
-  const [data, setData] = useState([]);
+  const [vigilantes, setVigilantes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
-  const [form, setForm] = useState({});
-  const [editId, setEditId] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({});
+  const [editingId, setEditingId] = useState(null);
   
-  const token = localStorage.getItem('token');
-  const headers = { Authorization: `Bearer ${token}` };
+  const getToken = () => localStorage.getItem('token');
 
-  const fetchData = async () => {
-    try { setData((await axios.get(`${API_URL}/admin/vigilantes`, { headers })).data); }
+  const fetchVigilantes = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/admin/vigilantes`, {
+        headers: { Authorization: `Bearer ${getToken()}` }
+      });
+      setVigilantes(response.data);
+    } catch (err) { console.error(err); } 
     finally { setLoading(false); }
   };
-  useEffect(() => { fetchData(); }, []);
+
+  useEffect(() => { fetchVigilantes(); }, []);
 
   const handleSubmit = async () => {
     setIsSaving(true);
     try {
-        if(editId) await axios.put(`${API_URL}/admin/vigilantes/${editId}`, form, { headers });
-        else await axios.post(`${API_URL}/admin/registrar_vigilante`, form, { headers });
-        setIsOpen(false); fetchData(); Swal.fire('Éxito', 'Guardado', 'success');
-    } catch(e) { Swal.fire('Error', 'No se pudo guardar', 'error'); }
-    finally { setIsSaving(false); }
-  };
-
-  const handleDelete = async (row) => {
-    if((await Swal.fire({ title: '¿Eliminar?', icon: 'warning', showCancelButton: true })).isConfirmed) {
-        setIsSaving(true);
-        try { await axios.delete(`${API_URL}/admin/vigilantes/${row.id_vigilante}`, { headers }); fetchData(); Swal.fire('Eliminado', '', 'success'); }
-        catch { Swal.fire('Error', '', 'error'); } finally { setIsSaving(false); }
+      const headers = { Authorization: `Bearer ${getToken()}` };
+      if (editingId) {
+        await axios.put(`${API_URL}/admin/vigilantes/${editingId}`, formData, { headers });
+      } else {
+        await axios.post(`${API_URL}/admin/registrar_vigilante`, formData, { headers });
+      }
+      
+      setIsModalOpen(false);
+      setFormData({});
+      fetchVigilantes();
+      Swal.fire('Éxito', 'Operación realizada correctamente', 'success');
+    } catch (err) {
+      Swal.fire('Error', 'No se pudo guardar el registro', 'error');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const cols = useMemo(() => [{Header:'Nombre', accessor:'nombre'}, {Header:'Rol', accessor:'nombre_rol'}, {Header:'Usuario', accessor:'usuario'}], []);
+  const handleDelete = async (user) => {
+    const res = await Swal.fire({
+        title: `¿Eliminar a ${user.nombre}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33'
+    });
+
+    if (res.isConfirmed) {
+        setIsSaving(true);
+        try {
+            await axios.delete(`${API_URL}/admin/vigilantes/${user.id_vigilante}`, {
+                headers: { Authorization: `Bearer ${getToken()}` }
+            });
+            fetchVigilantes();
+            Swal.fire('Eliminado', '', 'success');
+        } catch {
+            Swal.fire('Error', '', 'error');
+        } finally {
+            setIsSaving(false);
+        }
+    }
+  };
+
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleOpenModal = (u) => { setEditingId(u?.id_vigilante); setFormData(u || {}); setIsModalOpen(true); };
+
+  const columns = useMemo(() => [
+    { Header: 'Nombre', accessor: 'nombre' },
+    { Header: 'Documento', accessor: 'doc_identidad' },
+    { Header: 'Rol', accessor: 'nombre_rol' },
+    { Header: 'Usuario', accessor: 'usuario' }, // Volvemos a mostrar usuario
+  ], []);
 
   return (
-    <div className="p-4 container-fluid">
-        <LoadingOverlay isLoading={isSaving} />
-        <div className="d-flex justify-content-between mb-4"><h2 className="fw-bold">Usuarios</h2><button className="btn btn-success fw-bold" onClick={()=>{setEditId(null); setForm({}); setIsOpen(true)}}>Nuevo</button></div>
-        {loading ? 'Cargando...' : <div className="card border-0 shadow"><div className="card-body p-0"><CustomTable columns={cols} data={data} onEdit={(r)=>{setEditId(r.id_vigilante); setForm(r); setIsOpen(true)}} onDelete={handleDelete} /></div></div>}
-        <ModalForm isOpen={isOpen} onClose={()=>setIsOpen(false)} title={editId?"Editar":"Nuevo"} onSubmit={handleSubmit}><VigilanteForm formData={form} handleChange={(e)=>setForm({...form, [e.target.name]:e.target.value})} /></ModalForm>
+    <div className="container-fluid p-4">
+        <LoadingOverlay isLoading={isSaving} message="Procesando..." />
+        
+        <div className="d-flex justify-content-between align-items-center mb-4">
+            <h1 className="h2 text-gray-800">Gestión de Personal</h1>
+            <button className="btn btn-primary" onClick={() => handleOpenModal(null)}>
+                <i className="fas fa-plus me-2"></i> Nuevo
+            </button>
+        </div>
+
+        {loading ? <p>Cargando...</p> : (
+            <div className="card shadow-sm">
+                <div className="card-body p-0">
+                    <CustomTable columns={columns} data={vigilantes} onEdit={handleOpenModal} onDelete={handleDelete} />
+                </div>
+            </div>
+        )}
+
+        <ModalForm 
+            isOpen={isModalOpen} 
+            onClose={() => setIsModalOpen(false)} 
+            title={editingId ? "Editar Personal" : "Nuevo Personal"} 
+            onSubmit={handleSubmit}
+        >
+            <VigilanteForm formData={formData} handleChange={handleChange} />
+        </ModalForm>
     </div>
   );
 };
+
 export default VigilantesPage;
