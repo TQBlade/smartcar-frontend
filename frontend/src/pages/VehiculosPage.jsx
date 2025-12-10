@@ -1,11 +1,10 @@
 import axios from 'axios';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import Swal from 'sweetalert2'; // <--- IMPORTANTE
+import Swal from 'sweetalert2';
 import CustomTable from '../components/CustomTable.jsx';
 import LoadingOverlay from '../components/LoadingOverlay.jsx';
 import ModalForm from '../components/ModalForm.jsx';
 
-// Borra la línea fija y pon esto:
 const API_URL = (import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000') + '/api';
 const getToken = () => localStorage.getItem('token');
 
@@ -25,9 +24,14 @@ const VehiculosPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({});
   const [editingId, setEditingId] = useState(null);
+  
+  // --- PAGINACIÓN ---
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; // <--- CAMBIO: MOSTRAR 10 POR PÁGINA
 
   const fetchVehiculos = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await axios.get(`${API_URL}/vehiculos`, { headers: { Authorization: `Bearer ${getToken()}` } });
       setVehiculos(res.data);
@@ -71,10 +75,19 @@ const VehiculosPage = () => {
   const handleOpen = (v) => { setEditingId(v?.id_vehiculo); setFormData(v || {}); setIsModalOpen(true); };
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
+  // --- LÓGICA DE FILTRADO Y PAGINACIÓN INVERTIDA ---
   const filtered = vehiculos.filter(v => v.placa.toLowerCase().includes(searchTerm.toLowerCase()));
+  const reversed = [...filtered].reverse(); // Los últimos creados primero
+
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = reversed.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(reversed.length / itemsPerPage);
+
   const columns = useMemo(() => [
-    { Header: 'Placa', accessor: 'placa', Cell: ({value}) => <span className="fw-bold">{value}</span> },
+    { Header: 'Placa', accessor: 'placa', Cell: ({value}) => <span className="fw-bold text-dark">{value}</span> },
     { Header: 'Tipo', accessor: 'tipo' },
+    { Header: 'Color', accessor: 'color' },
     { Header: 'Propietario', accessor: 'propietario.nombre' },
   ], []);
 
@@ -82,11 +95,50 @@ const VehiculosPage = () => {
     <div className="container-fluid p-4">
         <LoadingOverlay isLoading={isSaving} message="Guardando..." />
         <div className="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
-            <h1 className="h2 text-gray-800 fw-bold">Vehículos</h1>
+            <h1 className="h2 text-gray-800 fw-bold">Gestión de Vehículos</h1>
             <button className="btn btn-primary fw-bold" onClick={() => handleOpen(null)}><i className="fas fa-car me-2"></i> Agregar</button>
         </div>
-        <input className="form-control mb-3" placeholder="Buscar placa..." onChange={e => setSearchTerm(e.target.value)} />
-        {loading ? <p>Cargando...</p> : <div className="card shadow-sm"><div className="card-body p-0"><CustomTable columns={columns} data={filtered} onEdit={handleOpen} onDelete={handleDelete} /></div></div>}
+        
+        <input 
+            className="form-control mb-3" 
+            placeholder="Buscar placa..." 
+            value={searchTerm}
+            onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} 
+        />
+        
+        {loading ? <div className="text-center p-5"><div className="spinner-border text-primary"></div></div> : (
+            <div className="card shadow-sm border-0">
+                <div className="card-body p-0">
+                    <CustomTable columns={columns} data={currentItems} onEdit={handleOpen} onDelete={handleDelete} />
+                </div>
+                
+                {/* CONTROLES DE PAGINACIÓN */}
+                {totalPages > 1 && (
+                    <div className="card-footer bg-white d-flex justify-content-between align-items-center py-3">
+                        <span className="text-muted small">Mostrando {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, reversed.length)} de {reversed.length}</span>
+                        <div className="btn-group">
+                            <button 
+                                className="btn btn-outline-secondary btn-sm" 
+                                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} 
+                                disabled={currentPage === 1}
+                            >
+                                <i className="fas fa-chevron-left me-1"></i> Anterior
+                            </button>
+                            <button className="btn btn-outline-secondary btn-sm disabled fw-bold text-dark">
+                                {currentPage} / {totalPages}
+                            </button>
+                            <button 
+                                className="btn btn-outline-secondary btn-sm" 
+                                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} 
+                                disabled={currentPage >= totalPages}
+                            >
+                                Siguiente <i className="fas fa-chevron-right ms-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+        )}
         <ModalForm isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? "Editar" : "Nuevo"} onSubmit={handleSubmit}><VehiculoForm formData={formData} handleChange={handleChange} /></ModalForm>
     </div>
   );
