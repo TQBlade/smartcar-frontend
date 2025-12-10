@@ -25,10 +25,10 @@ const VehiculosPage = () => {
   const [formData, setFormData] = useState({});
   const [editingId, setEditingId] = useState(null);
   
-  // --- PAGINACIÓN ---
+  // PAGINACIÓN
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10; // <--- CAMBIO: MOSTRAR 10 POR PÁGINA
+  const itemsPerPage = 10; 
 
   const fetchVehiculos = useCallback(async () => {
     setLoading(true);
@@ -52,7 +52,7 @@ const VehiculosPage = () => {
       setIsModalOpen(false); fetchVehiculos();
       Swal.fire({ title: 'Guardado', icon: 'success', confirmButtonColor: '#b91c1c' });
     } catch (err) {
-      Swal.fire({ title: 'Error', text: err.response?.data?.error || 'Falló la operación.', icon: 'error', confirmButtonColor: '#b91c1c' });
+      Swal.fire({ title: 'Error', text: err.response?.data?.error || 'Error. Verifique propietario.', icon: 'error', confirmButtonColor: '#b91c1c' });
     } finally { setIsSaving(false); }
   };
 
@@ -75,14 +75,32 @@ const VehiculosPage = () => {
   const handleOpen = (v) => { setEditingId(v?.id_vehiculo); setFormData(v || {}); setIsModalOpen(true); };
   const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  // --- LÓGICA DE FILTRADO Y PAGINACIÓN INVERTIDA ---
-  const filtered = vehiculos.filter(v => v.placa.toLowerCase().includes(searchTerm.toLowerCase()));
-  const reversed = [...filtered].reverse(); // Los últimos creados primero
+  // --- LÓGICA DE DATOS PROCESADOS ---
+  const processedData = useMemo(() => {
+    let data = [...vehiculos];
 
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = reversed.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(reversed.length / itemsPerPage);
+    if (searchTerm) {
+        data = data.filter(v => v.placa.toLowerCase().includes(searchTerm.toLowerCase()));
+    }
+    
+    // Ordenar por ID Vehiculo (Descendente)
+    data.sort((a, b) => b.id_vehiculo - a.id_vehiculo);
+    
+    return data;
+  }, [vehiculos, searchTerm]);
+
+  // Cálculos Paginación
+  const totalItems = processedData.length;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+  useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) setCurrentPage(totalPages);
+  }, [totalItems, currentPage, totalPages]);
+
+  const currentItems = processedData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const columns = useMemo(() => [
     { Header: 'Placa', accessor: 'placa', Cell: ({value}) => <span className="fw-bold text-dark">{value}</span> },
@@ -112,29 +130,25 @@ const VehiculosPage = () => {
                     <CustomTable columns={columns} data={currentItems} onEdit={handleOpen} onDelete={handleDelete} />
                 </div>
                 
-                {/* CONTROLES DE PAGINACIÓN */}
-                {totalPages > 1 && (
+                {/* FOOTER PAGINACIÓN */}
+                {totalItems > 0 && (
                     <div className="card-footer bg-white d-flex justify-content-between align-items-center py-3">
-                        <span className="text-muted small">Mostrando {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, reversed.length)} de {reversed.length}</span>
-                        <div className="btn-group">
-                            <button 
-                                className="btn btn-outline-secondary btn-sm" 
-                                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} 
-                                disabled={currentPage === 1}
-                            >
-                                <i className="fas fa-chevron-left me-1"></i> Anterior
-                            </button>
-                            <button className="btn btn-outline-secondary btn-sm disabled fw-bold text-dark">
-                                {currentPage} / {totalPages}
-                            </button>
-                            <button 
-                                className="btn btn-outline-secondary btn-sm" 
-                                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} 
-                                disabled={currentPage >= totalPages}
-                            >
-                                Siguiente <i className="fas fa-chevron-right ms-1"></i>
-                            </button>
-                        </div>
+                        <span className="text-muted small">
+                            Mostrando {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, totalItems)} de {totalItems}
+                        </span>
+                        <nav>
+                            <ul className="pagination pagination-sm mb-0">
+                                <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                                    <button className="page-link" onClick={() => setCurrentPage(p => Math.max(1, p - 1))}>Anterior</button>
+                                </li>
+                                <li className="page-item active">
+                                    <span className="page-link">{currentPage}</span>
+                                </li>
+                                <li className={`page-item ${currentPage >= totalPages ? 'disabled' : ''}`}>
+                                    <button className="page-link" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}>Siguiente</button>
+                                </li>
+                            </ul>
+                        </nav>
                     </div>
                 )}
             </div>
